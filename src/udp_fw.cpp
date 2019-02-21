@@ -3,8 +3,9 @@
 
 #include "udp_socket.h"
 
-constexpr auto STATS_COUNT = 1000;
-
+namespace {
+    constexpr auto STATS_COUNT = 1000;
+}
 
 namespace {
     udp_socket_t *global_sock_ptr = nullptr;
@@ -17,6 +18,11 @@ namespace {
             return;
         }
         if (global_sock_ptr) {
+            if (sig == SIGINT) {
+                std::cout << "\nCtrl-C pressed, quitting\n";
+            } else if (sig == SIGTERM) {
+                std::cout << "Termination requested, quitting\n";
+            }
             global_sock_ptr->stop();
         }
         act.sa_handler = SIG_DFL;
@@ -31,7 +37,6 @@ int main(int argc, char **argv) {
     if (argc < 4) {
         std::cerr << "Usage " << argv[0] << " <listen port> <target address> <target port>\n";
         std::cerr << "\n\t" << argv[0] << " listens on a port and forwards every packet to a specified address.\n";
-
         return 1;
     }
 
@@ -53,21 +58,23 @@ int main(int argc, char **argv) {
         // Install signal handler
 
         global_sock_ptr = &receive_socket;
-        ::memset(&act, '\0', sizeof(act));
+        ::memset(&act, 0, sizeof(act));
         act.sa_sigaction = &sigHandler;
         act.sa_flags = SA_SIGINFO;
         ::sigaction(SIGINT, &act, 0);
         ::sigaction(SIGPIPE, &act, 0);
+        ::sigaction(SIGTERM, &act, 0);
 
         // And wait for data
         size_t count = 0;
         size_t size = 0;
-        while(receive_socket.active()) {
-            const auto& data = receive_socket.wait_for_data();
+        while (receive_socket.active()) {
+            const auto &data = receive_socket.wait_for_data();
             if (data.empty()) {
-                std::cout << "X";
+                if (receive_socket.active()) {
+                    std::cout << "X";
+                }
             } else {
-                //std::cout << "Received data, forwarding\n";
                 send_socket.send(data);
                 std::cout << ".";
                 if (++count % 80 == 0) {
@@ -79,6 +86,7 @@ int main(int argc, char **argv) {
                     count = 0;
                     size = 0;
                 }
+                std::cout.flush();
             }
         }
 

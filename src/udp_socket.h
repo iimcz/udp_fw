@@ -47,7 +47,7 @@ struct udp_socket_t {
         while (active()) {
             pollfd fds = {socket_, POLLIN, 0};
             const auto ret = ::poll(&fds, 1, 1000);
-            if (ret < 0) {
+            if (ret < 0 && errno != EINTR) {
                 show_error("wait_for_data");
             }
             if (ret > 0) {
