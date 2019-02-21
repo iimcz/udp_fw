@@ -29,8 +29,8 @@ struct udp_socket_t {
         sockaddr_in addr;
         ::memset(&addr, 0, sizeof(sockaddr_in));
         addr.sin_family = AF_INET;
-        addr.sin_port = ::htons(port);
-        addr.sin_addr.s_addr = ::htonl(INADDR_ANY);
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
         if (::bind(socket_, reinterpret_cast<sockaddr *>(&addr), sizeof(sockaddr_in)) != 0) {
             report_error();
         }
